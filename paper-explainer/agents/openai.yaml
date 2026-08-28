@@ -1,0 +1,4 @@
+interface:
+  display_name: "論文白話解說"
+  short_description: "用白話、分段、例子和理解檢查，協助你真正讀懂學術論文"
+  default_prompt: "使用 $paper-explainer 幫我用簡單易懂的方式理解這篇論文。"

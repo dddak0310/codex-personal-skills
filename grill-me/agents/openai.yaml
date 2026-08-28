@@ -1,0 +1,7 @@
+interface:
+  display_name: "Grill Me"
+  short_description: "用決策樹深入訪談，釐清想法、假設、風險與關鍵取捨"
+  default_prompt: "Use $grill-me to challenge and clarify my idea before planning or execution."
+
+policy:
+  allow_implicit_invocation: false

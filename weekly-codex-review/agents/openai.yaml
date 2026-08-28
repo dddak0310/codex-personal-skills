@@ -1,0 +1,6 @@
+interface:
+  display_name: "Weekly Codex Review"
+  short_description: "依 session 記憶索引產生並同步保存繁中 HTML 週報投影片"
+  default_prompt: "使用 $weekly-codex-review 從 CCU-Bioinformatics-Lab/chingwei-daily 的記憶索引、每日 manifest 與 HTML 日誌彙整指定週，同步保存週報並更新 README 的每週回顧索引。"
+policy:
+  allow_implicit_invocation: true

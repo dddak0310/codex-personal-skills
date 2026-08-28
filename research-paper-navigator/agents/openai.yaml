@@ -1,0 +1,6 @@
+interface:
+  display_name: "Research Paper Navigator"
+  short_description: "批次閱讀與比較學術論文，建立可追溯的核心文獻組合"
+  default_prompt: "使用 $research-paper-navigator 分析我提供的論文，建立核心文獻清單與繁體中文研究導覽報告。"
+policy:
+  allow_implicit_invocation: true

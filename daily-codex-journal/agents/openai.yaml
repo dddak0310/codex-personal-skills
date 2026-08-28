@@ -1,0 +1,6 @@
+interface:
+  display_name: "Daily Codex Journal"
+  short_description: "以多 session 索引建立每日 Codex 階層式記憶"
+  default_prompt: "使用 $daily-codex-journal 整理今天所有可存取的 Codex sessions，更新 HTML 日誌與 JSON 記憶索引並發布到 GitHub。"
+policy:
+  allow_implicit_invocation: true
