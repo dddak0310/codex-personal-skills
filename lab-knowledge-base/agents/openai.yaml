@@ -1,0 +1,7 @@
+interface:
+  display_name: "Lab Knowledge Base"
+  short_description: "查詢並解讀實驗室長讀癌症基因體知識庫內容"
+  default_prompt: "Use $lab-knowledge-base to answer my question using the local lab knowledge base."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投影片頁</title>
+<!-- Single-page preview only; build.py inlines the CSS into deck.html.
+     assets/ is a symlink to the skill's assets dir, created by create_folder.sh
+     and repaired by serve_preview.py. Linking straight to ~/.claude climbs
+     outside the preview server's root and 404s — keep it relative like this. -->
+<link rel="stylesheet" href="assets/slides.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+<!-- SLIDE:START  ←★ 彙整 builder 只會抓這兩個標記之間的內容；標記務必保留 -->
+<div class="slide-outer">
+  <div class="slide">
+    <!-- 左上角小標題：同章節的頁面填相同文字 -->
+    <div class="slide-label">章節名稱</div>
+
+    <h2><span class="num">1</span>這頁的標題</h2>
+    <p class="lead">說明文字。<b class="old">紅字=舊版/問題</b>、<b class="new">綠字=新版/改善</b>。</p>
+
+    <div class="mermaid" style="width:100%;">
+flowchart LR
+    A["節點"] --> B["節點"]
+    classDef calc fill:#fff1f0,stroke:#d4380d,color:#820014;
+    classDef new fill:#f6ffed,stroke:#389e0d,color:#135200;
+    </div>
+
+    <div class="takeaway">結論：<b>一句帶走</b>。</div>
+  </div>
+</div>
+<!-- SLIDE:END -->
+</div>
+<script>
+  // 單頁預覽縮放（彙整後由 deck.js 接管）
+  function scaleSlide() {
+    const outer = document.querySelector('.slide-outer');
+    const inner = outer && outer.querySelector('.slide');
+    if (!inner) return;
+    const scale = outer.offsetWidth / 1280;
+    inner.style.transform = 'scale(' + scale + ')';
+  }
+  scaleSlide();
+  window.addEventListener('resize', scaleSlide);
+
+  // mermaid 會用 getBoundingClientRect 量標籤來決定節點框大小，會吃到 .slide 的
+  // transform: scale()。渲染期間先拿掉縮放（見 slides.css 的 .mermaid-measuring），
+  // 否則節點框會照縮放比例做小、文字爆框被裁掉。deck.js 也用同一套做法。
+  mermaid.initialize({ startOnLoad: false, theme: 'base', flowchart: { curve: 'basis' }, themeVariables: { fontSize: '13px' } });
+  document.body.classList.add('mermaid-measuring');
+  mermaid.run().finally(() => {
+    document.body.classList.remove('mermaid-measuring');
+    scaleSlide();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,537 @@
+/* weekly-deck 版面樣式
+   投影片尺寸固定 1600×900（16:9）。所有頁共用這一份，
+   想調字級／配色只要改這裡，全部頁一起變 —— 不要在 deck.json 裡寫樣式。 */
+
+:root{
+  --navy:#1E2761;        /* 主色：封面、分隔頁、深底 */
+  --navy-2:#2A3578;      /* 深底的次階 */
+  --ice:#CADCFC;         /* 冰藍：深底上的次要文字 */
+  --accent:#F2B705;      /* 強調：只用在「要看這裡」的地方，全場節制使用 */
+  --ink:#16193B;         /* 淺底上的主文字 */
+  --ink-2:#5A5F82;       /* 淺底上的次要文字 */
+  --line:#D8DCEC;
+  --bg:#FFFFFF;
+  --bg-soft:#F4F6FC;
+  --warn:#B3261E;
+  --ok:#1E6E42;
+  --W:1600px; --H:900px;
+  --pad:72px;
+}
+
+/* ── 淺色字（var(--ink-2)）的清單 —— 每一個都固定對應一種「用途」────────────
+   投影片上的字分四種用途（label／value／annot／def，字彙表見下方 SVG 那一段）。
+   ⛔ **主線內容頁上，淺色只給 annot 與 def**，而 annot ≤2、def ≤1 是**整張投影片**的
+   額度 —— 不管那句話寫在 .svg 裡，還是寫在 deck.json 的欄位裡。
+   由 check_deck.py 的 check_purpose() 合併計數。
+
+     渲染成            deck.json 欄位            用途    顏色
+     .sub              slide.sub                 annot   淺
+     figcaption        body.caption（圖說）       annot   淺
+     caption           body.tables[].caption      annot   淺
+     .stat .k          body.items[].k            label   **正常色**（後改）
+     .stat .v          body.items[].v            value   正常色（深藍）
+     .step .d          body.steps[].d            label   **正常色**（後改）
+     .lane-h           body.lanes[].label        label   正常色（lane 的名字）
+     .lane-h .note     body.lanes[].note         label   正常色（名字的補語，不得成句）
+     .node .h          body.lanes[].nodes[].t    label   正常色（節點的名字）
+     .node .d/li/code  nodes[].d/items[]/codes[] label   正常色（節點框的內容）
+     .node .v          body.lanes[].nodes[].v    value   正常色（深藍）
+     .node .chip       body.lanes[].nodes[].chip label   正常色（產出物的名字）
+     .arr .lbl         body.lanes[].nodes[].arrow label  正常色（流動物品的名字）
+     td .cellv         body.tables[].rows 的儲存格 value  正常色
+
+   `.stat .k` 與 `.step .d` 原本是淺色，但它們是**東西的名字**、屬於那個卡片／方框，
+   不是旁白 —— 淺色會讓寫的人以為那裡可以放說明文。改成正常色，並由 check_deck.py
+   套用「label 不得成句」。
+
+   兩個**刻意**的豁免（不是漏掉）：
+     .topic       主題編號列（threads[].title），每頁都有的框架元件，不是這頁的內容
+     .agenda .d   議程／封面是結構頁，不進逐頁檢查；那是線的名字
+     .issue .d    issues 頁一律是 backup，那段字是問題本身的內容，不是圖的旁白
+   ──────────────────────────────────────────────────────────────────────── */
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#6B7089;
+  font-family:"Inter","Helvetica Neue",Arial,"Noto Sans","Noto Sans TC","Noto Sans CJK TC",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── 投影片外框 ───────────────────────────── */
+.slide{
+  position:relative; width:var(--W); height:var(--H);
+  overflow:hidden;                 /* 版面內不得捲動；溢位由 shoot.py 量測攔截 */
+  background:var(--bg); color:var(--ink);
+  padding:var(--pad);
+  display:flex; flex-direction:column;
+  margin:0 auto 28px; box-shadow:0 6px 28px rgba(0,0,0,.35);
+}
+.slide.dark{background:var(--navy); color:#fff}
+.slide.soft{background:var(--bg-soft)}
+
+/* 主題編號（多線時的定位，對應議程頁的 1／2／3） */
+.topic{display:flex; align-items:center; gap:12px; margin-bottom:14px;
+       font-size:21px; color:var(--ink-2); letter-spacing:.02em}
+.topic b{display:inline-flex; align-items:center; justify-content:center;
+         width:32px; height:32px; border-radius:50%;
+         background:var(--navy); color:#fff; font-size:18px; font-weight:800}
+
+/* 標題 */
+h1{font-size:56px; line-height:1.22; font-weight:800; letter-spacing:-.01em}
+h2{font-size:42px; line-height:1.24; font-weight:800; margin-bottom:24px; letter-spacing:-.01em}
+.sub{font-size:26px; color:var(--ink-2); line-height:1.5; margin-top:14px}
+.dark .sub{color:var(--ice)}
+
+/* 主體區：置中撐開，內容永遠垂直居中偏上 */
+.body{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; gap:20px}
+
+/* ⛔ 底部結論條 `.takeaway` **已移除**（N67）——結論不上投影片，由講者口頭講，
+   寫進 `notes` 的「【口頭結論】」（進 pptx 備忘稿）。`check_takeaway()` 會擋掉任何 takeaway。
+   ⚠️ 它原本佔 93px 的高度預算，拆掉後那 93px 回到 `.body`（diagram-craft §6 的表已重算）。 */
+
+/* ── 封面 ───────────────────────────── */
+.t-cover{justify-content:center}
+.t-cover .kicker{font-size:24px; color:var(--ice); letter-spacing:.14em; margin-bottom:22px}
+.t-cover h1{font-size:64px; max-width:1300px}
+.t-cover .range{margin-top:36px; font-size:24px; color:var(--ice); opacity:.85}
+
+/* ── 週敘事（PMRC）───────────────────── */
+.pmrc{display:grid; grid-template-columns:180px 1fr; gap:16px 28px; align-items:start}
+.pmrc dt{font-size:24px; font-weight:800; color:var(--accent); padding-top:4px}
+.pmrc dd{font-size:28px; line-height:1.5}
+
+/* ── 議程 / 線清單 ───────────────────── */
+ul.agenda{display:flex; flex-direction:column; gap:18px}
+.agenda li{list-style:none; display:flex; gap:22px; align-items:flex-start;
+           font-size:30px; line-height:1.4; padding-bottom:16px; border-bottom:1px solid var(--line)}
+.dark .agenda li{border-color:rgba(255,255,255,.18)}
+.agenda .n{font-size:26px; font-weight:800; color:var(--accent); min-width:52px}
+.agenda .t{font-weight:700}
+.agenda .d{display:block; font-size:23px; color:var(--ink-2); font-weight:400; margin-top:4px}
+.dark .agenda .d{color:var(--ice)}
+
+/* ── 線的開場頁 ───────────────────────── */
+.t-thread-intro{justify-content:center}
+.t-thread-intro .big{font-size:26px; letter-spacing:.16em; color:var(--accent); margin-bottom:18px}
+.t-thread-intro h1{max-width:1240px}
+
+/* ── 表格 ───────────────────────────── */
+table{border-collapse:collapse; width:100%; font-size:25px}
+caption{caption-side:top; text-align:left; font-size:22px; color:var(--ink-2); padding-bottom:10px}
+th,td{padding:13px 18px; text-align:left; border-bottom:1px solid var(--line); line-height:1.35}
+thead th{background:var(--navy); color:#fff; font-weight:700; border-bottom:none}
+tbody tr:nth-child(even){background:var(--bg-soft)}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
+td strong{color:var(--navy); font-weight:800}
+
+/* 固定欄寬：比例 bar 的長度只有在欄寬固定時才可比 —— 欄寬隨內容撐開的話，
+   同一個 80% 在窄欄與寬欄畫出來的像素長度不同，肉眼比不出高低。
+   由 body.tables[].colw 觸發，render_deck.py 會一併輸出 <colgroup>。
+   ⚠️ 多張表要跨表比較時，colw 要給同一組寬度。 */
+table.fixed{table-layout:fixed}
+
+/* 儲存格內的比例 bar：上面一行是數值（value），下面一條寬度＝比例。
+   ⛔ 條的顏色只有三種語意（navy 一般／ok 保留改善／warn 移除問題），
+      不要為了好看再開第四種 —— §5「同一個顏色只能有一種意思」。 */
+td .cellv{line-height:1.3}
+td .bar-track{margin-top:8px; height:10px; border-radius:5px; background:#E7EAF3; overflow:hidden}
+td .bar-fill{height:100%; background:var(--navy)}
+td .bar-fill.good{background:var(--ok)}
+td .bar-fill.bad{background:var(--warn)}
+
+/* 列標記：drop＝這一列被移除（紅底刪除線），hl＝這一列是重點（金底）。
+   第一欄不畫刪除線 —— 它是這一列的名字，名字要讀得出來才知道刪掉的是誰。 */
+tbody tr.hl td{background:#FFF6DC}
+tbody tr.drop td{background:#FBEDEC; color:var(--warn); text-decoration:line-through}
+tbody tr.drop td:first-child{text-decoration:none}
+
+/* ── 大數字 ─────────────────────────── */
+div.stats{display:flex; gap:32px; justify-content:center; align-items:stretch}
+.stat{flex:1; background:var(--bg-soft); border-top:8px solid var(--navy);
+      padding:32px 28px; display:flex; flex-direction:column; justify-content:center}
+.stat .v{font-size:76px; font-weight:800; color:var(--navy); line-height:1.05;
+         font-variant-numeric:tabular-nums}
+.stat .k{font-size:23px; color:var(--ink); margin-top:12px; line-height:1.4}   /* label：這個數字的名字 */
+
+/* ── 兩欄對照 ───────────────────────── */
+div.cols{display:grid; grid-template-columns:1fr 1fr; gap:32px; align-items:stretch}
+.col{background:var(--bg-soft); padding:28px 30px; display:flex; flex-direction:column; gap:14px}
+.col h3{font-size:28px; font-weight:800; color:var(--navy)}
+.col.bad h3{color:var(--warn)} .col.good h3{color:var(--ok)}
+/* tone 原本只改 h3 的顏色 —— 沒有 h3 的欄就完全看不出 tone。改成左色帶，
+   三種語意與全場一致：紅＝舊／問題／移除、綠＝新／改善／保留、金＝這一頁要你看的。 */
+.col.bad{border-left:8px solid var(--warn)}
+.col.good{border-left:8px solid var(--ok)}
+.col p,.col li{font-size:24px; line-height:1.55}
+.col ul{padding-left:26px} .col li{margin-bottom:8px}
+
+/* ── 流程 / 步驟 ────────────────────── */
+div.flow{display:flex; gap:0; align-items:stretch}
+.step{flex:1; background:var(--bg-soft); padding:26px 24px; position:relative}
+.step + .step{margin-left:26px}
+.step + .step::before{content:"→"; position:absolute; left:-24px; top:50%;
+  transform:translateY(-50%); font-size:30px; color:var(--ink-2)}
+.step .n{font-size:20px; font-weight:800; color:var(--accent); letter-spacing:.1em}
+.step .t{font-size:25px; font-weight:700; margin-top:8px; line-height:1.35}
+.step .d{font-size:21px; color:var(--ink); margin-top:8px; line-height:1.45}   /* label：這一步的內容，不是旁白 */
+
+/* ── Pipeline：單向流程的 lane / node / arrow ──────────────────────
+   純 CSS flex，不用管座標；節點內能放清單、數字、色塊 —— 這是「單向線性流程」
+   的第一選擇（路由表第一格，見 references/composition-vocabulary.md）。
+   ⛔ **只走單一方向**。要分支、要回圈、要精準控位 → 走路由表下面那格（手刻 SVG）。
+
+   字級是 1600×900 的值（來源是 1280×720，換算 ×1.25 後再抬到我們的下限，
+   見 presentation_rules §6 的字級表）。
+
+   ⚠️ lane 不用 flex:1 撐滿剩餘高度 —— 撐大的是容器不是內容，節點會被拉成
+   「大框小字」，正是 presentation_rules §6 擋的那件事。改由 .body 垂直置中。
+   ⚠️ .arr 用 align-self:center 而不是 stretch：stretch 會讓一個 200px 高的容器
+   只裝一條 4px 的線，shoot.py 的「容器過空」會照實報出來（那是對的）。 */
+div.pipeline{display:flex; flex-direction:column; gap:24px}
+.lane{background:var(--bg-soft); border:2px solid var(--line); border-radius:14px;
+      padding:16px 22px 20px; display:flex; flex-direction:column; gap:14px}
+.lane.good{border-color:#B6D9C4} .lane.bad{border-color:#E7BEBA}
+.lane-h{display:flex; align-items:center; gap:14px; font-size:21px; font-weight:800;
+        color:var(--navy); letter-spacing:.03em}
+.lane.good .lane-h{color:var(--ok)} .lane.bad .lane-h{color:var(--warn)}
+/* lane 名稱的補語（例：offline / query time）。是名字的一部分 → 正常色、不得成句 */
+.lane-h .note{font-weight:500; font-size:19px; color:var(--ink)}
+.lane-h::after{content:""; flex:1; height:2px; background:currentColor; opacity:.22}
+.lane-nodes{display:flex; align-items:stretch}
+
+.node{flex:1; min-width:0; background:#fff; border:1px solid var(--line);
+      border-top:6px solid var(--navy); border-radius:10px; padding:16px 18px 14px;
+      display:flex; flex-direction:column; gap:10px}
+.node.good{border-top-color:var(--ok)} .node.bad{border-top-color:var(--warn)}
+.node .h{display:flex; align-items:center; gap:11px; font-size:24px; font-weight:800;
+         color:var(--navy); line-height:1.25}
+.node.good .h{color:var(--ok)} .node.bad .h{color:var(--warn)}
+.node .n{width:34px; height:34px; border-radius:50%; flex-shrink:0;
+         display:flex; align-items:center; justify-content:center;
+         background:var(--navy); color:#fff; font-size:19px; font-weight:800}
+.node.good .n{background:var(--ok)} .node.bad .n{background:var(--warn)}
+.node .d{font-size:20px; line-height:1.45; color:var(--ink)}      /* label：這個節點做什麼 */
+.node ul{padding-left:24px} .node li{font-size:19px; line-height:1.45; margin-bottom:5px}
+.node .v{font-size:46px; font-weight:800; color:var(--navy); text-align:center;
+         font-variant-numeric:tabular-nums; line-height:1.1}      /* value */
+.node .codes{display:flex; flex-wrap:wrap; gap:8px}
+.node .code{font-size:18px; font-weight:700; padding:4px 11px; border-radius:6px;
+            background:#E7EBF7; color:var(--navy)}
+.node .code.good{background:#E9F3ED; color:var(--ok)}
+.node .code.bad{background:#FBEDEC; color:var(--warn)}
+/* 產出物：釘在節點底部，一整排的產出物才會對齊成一條線 */
+.node .chip{margin-top:auto; align-self:flex-start; font-size:18px; font-weight:700;
+            padding:5px 13px; border-radius:99px; background:var(--navy); color:#fff}
+
+.arr{width:66px; flex-shrink:0; align-self:center;
+     display:flex; flex-direction:column; align-items:center; gap:7px; padding:0 6px}
+.arr .bar{position:relative; width:100%; height:4px; border-radius:2px; background:var(--ink-2)}
+.arr .bar::after{content:""; position:absolute; right:-1px; top:-7px;
+                 border-top:9px solid transparent; border-bottom:9px solid transparent;
+                 border-left:13px solid var(--ink-2)}
+.arr .lbl{font-size:18px; color:var(--ink); text-align:center; line-height:1.25}
+
+/* ── 條列（節制使用：只放定義／標註／必要補充）── */
+ul.points{padding-left:30px}
+.points li{font-size:27px; line-height:1.55; margin-bottom:14px}
+.points li strong{color:var(--navy)}
+
+/* ── 問題／待辦 ─────────────────────── */
+div.issues{display:flex; flex-direction:column; gap:18px}
+.issue{background:var(--bg-soft); border-left:8px solid var(--warn); padding:20px 26px}
+.issue .t{font-size:26px; font-weight:700}
+.issue .d{font-size:23px; color:var(--ink-2); margin-top:6px; line-height:1.45}
+.issue .r{font-size:23px; margin-top:8px; color:var(--ok); font-weight:600}
+
+/* ── 缺圖（render_deck.py 的 missing_block，FINDINGS N95）──────────────
+   ⛔ 這一塊**是要礙眼的**：缺 body.src 的 diagram 頁以前渲成一個空的 <figure>，
+   在 13 頁的 deck 裡翻過去沒有人會發現。紅底 ＋ 頁號 ＋ 欄位名，翻到就知道缺什麼。 */
+.missing{flex:1; min-height:0; display:flex; flex-direction:column;
+         align-items:center; justify-content:center; gap:10px;
+         background:#FBEDEC; border:3px dashed var(--warn); border-radius:12px;
+         padding:28px; text-align:center}
+.missing-h{font-size:34px; font-weight:700; color:var(--warn); letter-spacing:.04em}
+.missing-b{font-size:22px; color:var(--warn); line-height:1.5; max-width:60ch}
+.missing-b code{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:20px}
+
+/* ── 圖片 ───────────────────────────── */
+figure.figure{flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center}
+.figure img{max-width:100%; max-height:100%; object-fit:contain}
+.figure figcaption{font-size:21px; color:var(--ink-2); margin-top:12px}
+
+/* ── 圖解（第一選擇）──────────────────
+   .diagram 直接吃 inline SVG 或 <img src="*.svg">。
+   SVG 內部一律用 CSS 變數的實色，並且**不要**在 SVG 裡寫字型大小以外的樣式，
+   讓它跟著這份主題走。 */
+figure.diagram{flex:1; min-height:0; display:flex; flex-direction:column;
+               align-items:center; justify-content:center; gap:14px}
+figure.diagram svg, figure.diagram img{max-width:100%; max-height:100%; height:auto}
+figure.diagram figcaption{font-size:21px; color:var(--ink-2)}
+
+/* ── 例子優先：主圖**全寬** ───────────────────────────
+   改（使用者裁決）：右邊那格「規則」（黃底）不需要，只留左邊（藍底）那一塊，
+   放大佔滿整個版面即可。
+   → 原本的 70/30 grid（主圖 7fr ＋ aside.case-aside 3fr）改成單欄，
+     `aside.case-aside` 的樣式一併移除（版型不再渲染它，render_deck.py 看到 body.aside 會直接報錯）。
+   ⛔ 規則與邊界沒有被取消，只是改成畫進主圖的 SVG 裡（depth=mechanism 的硬性要求）。 */
+div.case-layout{height:100%; display:grid; grid-template-columns:1fr; min-height:0}
+figure.case-main{margin:0; min-width:0; min-height:0; display:flex; flex-direction:column;
+                 align-items:center; justify-content:center; gap:12px;
+                 background:var(--bg-soft); border:2px solid var(--line); border-radius:14px; padding:20px}
+figure.case-main svg,figure.case-main img{max-width:100%; max-height:100%; width:100%; height:auto}
+figure.case-main figcaption{font-size:21px; color:var(--ink-2)}
+
+/* SVG 內共用的排版語彙（在 SVG 裡用 class 引用即可） */
+/* ── 任務 6 L3：四種對比各司其職，⭐ 顏色降為最後手段 ──────────────────
+   版面能用的對比只有四種，開工前**三種都沒在工作**：間距不分群（L1 已修）、
+   字重靠 inline 亂加（L0 已修）—— 於是分組、強調、語意三件事**全部由金色
+   `--accent` 一個人扛**。⛔ 一個訊號同時代表三種意思 ＝ 三種都變弱。
+
+     位置／對齊 → 「這些是同一組」
+     間距       → 「層級」（§6b 的 ROW/GROUP/SECTION）
+     字重       → 「主從」（term 600 / gloss 400，⛔ 就這兩級）
+     顏色       → ⭐ 只負責「這一頁的主張」
+
+   ── ⛔ 形狀的顏色**只做分類，不做強調**（使用者裁決，2026-09-05）───────
+   ⭐ **框、線、長條的顏色只能回答「這是哪一類」，⛔ 不能回答「這一個特別重要」。**
+   於是**強調框整個從字彙裡拿掉了** —— 以下四個 class **已刪除**，⛔ 不要加回來：
+
+       svg .box-hl    svg .grp-hl    svg .arrow-hl    svg .bar-hl
+
+   HTML 容器層的同一個裝置一併刪除（本 deck 未使用）：
+       .stat.hl   .col.hl   .lane.hl   .node.hl（含 .n／.v／.chip）
+
+   ⭐ **保留的兩個，因為它們標的不是「一個東西」**：
+       svg .hl / svg .t-hl   —— 標的是**一句話**（可疊在任一用途 class 上）
+       tbody tr.hl           —— 標的是**一列資料**（表格沒有「只描邊」這個選項）
+
+   ⚠️ **使用者裁決**（⛔ 判準的來源，照這句讀，不要再自行推廣）：
+   > 框線**可以**用顏色分類；⛔ **不可**單獨挑一個框出強調框線（當時是黃色那個）。
+
+   **為什麼**（實測，7 張圖）：`box-hl`／`grp-hl` 幾乎都框在**本來就最大、最中間**
+   的那個框上（`A3` 的 `candidates.py`、`A4` 的 `check_readability.py`），
+   或框在**並列的同類裡挑一個**（`A1` 兩群標一個、`A5` 三列標兩列）——
+   ⭐ **強調本來就最顯眼的東西 = 沒有強調；並列的東西標一半 = 雜訊。**
+   金底原本佔版面的 39.5%（`A5` 一張 65.2%），先降成只描邊，再整個拿掉。
+
+   ⚠️ 分類色**照舊保留**，它們回答的是「這是哪一類」不是「看這個」：
+       box-bad / grp-bad（紅＝舊、失效）      box-good / grp-good（綠＝新、通過）
+       box-null / grp-null（紅＝預期歸零）    box-ctl / grp-ctl（灰虛線＝控制變數）
+
+   ⛔ **門由 `check_deck.py` 的 `check_emphasis_shape()` 守著**：SVG 裡出現
+   `box-hl`／`grp-hl`／`arrow-hl`／`bar-hl` → **ERROR**。
+   `render_figure.py` 的 `TONE` 也拿掉了 `"hl"`，spec 寫 `tone:"hl"` 會直接報錯。
+
+   ⚠️ **反方向（N56）**：強調框拿掉之後，「三秒內眼睛該落在哪」由
+   **位置／大小 → 標題 → 一處金字**回答（由強到弱）。
+   ⛔ **金色有上限 1、沒有下限** —— 一頁可以完全沒有金色。
+   ⚠️ 逼每頁都要有一處金，正好會製造被退回最多次的那個毛病
+   —— 框住的都是不需要特別看的部分。⭐ 位置本來就是更強的手段：
+   要它最重要，就把它放大、放中間、放第一個。 */
+/* ── ⭐ 第三種顏色角色：**區別**（使用者裁決，2026-09-05）───────────────────
+   **使用者裁決**（⛔ 判準的來源，照這句讀）：
+   > block **都要上色**才分得開；當時的圖完全沒有色彩。
+
+   ⚠️ 在這之前，圖上的顏色只有兩種角色，⛔ 而「區別」不在裡面：
+       強調 → 6c 已從形狀拿掉（只剩字的 `.hl`）
+       分類 → `bad`／`good`／`null`／`ctl`，⭐ **要有 good/bad 這條軸才適用**
+   實測：7 張圖裡有 4 張（A1／A2／B1／B3）**根本沒有 good/bad 軸** ——
+   A1 兩群是「人讀／agent 讀」兩種讀者、A2 與 B1 是同一條流程的三步、B3 是左右對應。
+   於是那 4 張的 21 個框**全部同一個灰**。⭐ **不是沒填，是字彙裡沒有這一級**
+   —— 跟 6a／N118（層級缺一級 → 只好用 inline style 硬補）同一個病。
+
+   ⭐ **`c1`~`c6` 回答的是「這是並列的哪一個」，⛔ 不回答好壞、也不回答重不重要。**
+   所以「一個顏色一種意思」沒有被破壞 —— ⭐ 破壞它的會是「拿紅綠去區別」，
+   那才會讓觀眾把 A1 的記錄層讀成「壞的」。
+
+   ── 三個保留色，⛔ 這個色票一格都不准碰 ────────────────────────
+       紅（--warn）＝ 舊的／失效／預期歸零      綠（--ok）＝ 新的／通過
+       金（--accent）＝「看這裡」，⭐ 只給**字**（6c 之後形狀不能用金）
+   ⭐ 所以 c1~c12 一律走藍／靛／紫／石板／天藍／灰褐／深藍／蘭紫／灰紫／深青藍／
+   可可／藍灰，⛔ 不碰紅、綠、金。
+   ⚠️ **第一版有紫紅與青綠，實測直接踩雷**：B1 的 gate 2 拿到紫紅、gate 3 拿到青綠，
+   ⭐ 在畫面上一個讀成「壞的」、一個讀成「通過了」—— ⛔ 而那兩件事都不是真的。
+   **色相離紅綠不夠遠，區別色就會被讀成分類色**，⛔ 這兩個色因此拿掉。
+
+   ── ⭐ 判準（⛔ 兩維，不是只看色相；量出來的，不是憑印象）─────────────
+   一個區別色**必須**滿足其中一條：
+       ① 色相離「紅 3°／綠 147°／金 45°」都 **≥ 45°**；或
+       ② **彩度 ≤ 0.40** —— ⭐ 低彩度的暖灰不會被讀成警示色。
+   ⚠️ 加②那一條是實測逼出來的：只看色相的話 `c6 灰褐`（離金 11°）與
+   `c11 可可`（離紅 19°）會被自己的規則否決，⛔ 但它們在畫面上根本不像金或紅。
+   實測（HSV）：語意色的彩度是 **紅 0.83／綠 0.73／金 0.98**，
+   而那兩個暖色是 **0.25／0.39** —— ⭐ **不到一半，那才是它們不會被誤讀的原因。**
+   ⛔ 所以規則錯的是「只看色相」，不是那兩個色。
+
+   逐色複驗（色相 / 離最近語意色 / 彩度）：
+       c1 藍 222/75/.55   c2 靛 243/96/.57   c3 紫 267/96/.60   c4 石板 219/72/.31
+       c5 天藍 205/58/.69  c6 灰褐 34/11/.25  c7 深藍 217/70/.72  c8 蘭紫 293/70/.57
+       c9 灰紫 256/107/.39 c10 深青藍 197/50/.75 c11 可可 22/19/.39 c12 藍灰 206/59/.48
+   ⚠️ 只有 `c6`／`c11` 是靠②過的，其餘 10 個靠①。⛔ 再加新色請照這條判準先量再加。
+
+   ── 為什麼**底色很淡、框線很飽和** ─────────────────────────────
+   ⚠️ 反方向（N56）：「每個 block 都上色」的失效是**滿版彩虹** ——
+   底色一濃，`box-bad`／`box-good` 的語意紅綠就被淹掉，
+   ⭐ 顏色從此不再回答任何問題。
+   擋法：**識別交給框線（飽和），面積交給底色（極淡）** ——
+   於是分類色（底色明顯偏紅／偏綠）在一片淡冷底裡**仍然跳得出來**。
+   ⛔ 不要把 c1~c12 的 fill 調濃，那會直接製造上面那個失效。
+
+   ── ⭐ **為什麼是 12 個**（⛔ 不是「看起來夠用」）─────────────────────
+   數字從**這個 skill 自己宣告的並列上限**推出來，⛔ 不是從某一份 deck 數出來的：
+   一張圖最多的並列框是 `two_col_link` 的左右兩欄，而每欄的上限是
+   `check_deck.LIMITS["col_items"]` = **6** → **6 + 6 = 12**。
+   ⭐ 所以 12 個色**剛好蓋滿字彙允許的最大情形**，一張合法的圖不會被迫重複用色。
+   ⚠️ 上限若改，這裡要跟著改 —— `render_figure._cat_of()` 超出時會出聲提醒。 */
+svg .box-c1{fill:#EDF1FC; stroke:#3B5BA8; stroke-width:2}   /* 藍 */
+svg .box-c2{fill:#EEEDFB; stroke:#4B46A6; stroke-width:2}   /* 靛 */
+svg .box-c3{fill:#F3EDFB; stroke:#6E43A4; stroke-width:2}   /* 紫 */
+svg .box-c4{fill:#EDEFF5; stroke:#4E5A70; stroke-width:2}   /* 石板 */
+svg .box-c5{fill:#E9F1F9; stroke:#2E6A96; stroke-width:2}   /* 天藍 */
+svg .box-c6{fill:#F3F0EA; stroke:#6F6353; stroke-width:2}   /* 灰褐 */
+svg .box-c7{fill:#E9EDF6; stroke:#1F3D6E; stroke-width:2}   /* 深藍 */
+svg .box-c8{fill:#F7ECF7; stroke:#8A3F94; stroke-width:2}   /* 蘭紫 */
+svg .box-c9{fill:#F0EEF6; stroke:#574A7A; stroke-width:2}   /* 灰紫 */
+svg .box-c10{fill:#E8F0F3; stroke:#2B5566; stroke-width:2}   /* 深青藍 */
+svg .box-c11{fill:#F4EFEA; stroke:#7A5C4B; stroke-width:2}   /* 可可 */
+svg .box-c12{fill:#ECEFF4; stroke:#3F6079; stroke-width:2}   /* 藍灰 */
+svg .grp-c1{fill:#EDF1FC; stroke:#3B5BA8; stroke-width:2}
+svg .grp-c2{fill:#EEEDFB; stroke:#4B46A6; stroke-width:2}
+svg .grp-c3{fill:#F3EDFB; stroke:#6E43A4; stroke-width:2}
+svg .grp-c4{fill:#EDEFF5; stroke:#4E5A70; stroke-width:2}
+svg .grp-c5{fill:#E9F1F9; stroke:#2E6A96; stroke-width:2}
+svg .grp-c6{fill:#F3F0EA; stroke:#6F6353; stroke-width:2}
+svg .grp-c7{fill:#E9EDF6; stroke:#1F3D6E; stroke-width:2}
+svg .grp-c8{fill:#F7ECF7; stroke:#8A3F94; stroke-width:2}
+svg .grp-c9{fill:#F0EEF6; stroke:#574A7A; stroke-width:2}
+svg .grp-c10{fill:#E8F0F3; stroke:#2B5566; stroke-width:2}
+svg .grp-c11{fill:#F4EFEA; stroke:#7A5C4B; stroke-width:2}
+svg .grp-c12{fill:#ECEFF4; stroke:#3F6079; stroke-width:2}
+svg .box{fill:var(--bg-soft); stroke:var(--line); stroke-width:2}
+svg .box-bad{fill:#FBEDEC; stroke:var(--warn); stroke-width:2}
+svg .box-good{fill:#E9F3ED; stroke:var(--ok); stroke-width:2}
+svg .bar{fill:var(--navy)}
+svg .arrow{stroke:var(--ink-2); stroke-width:3; fill:none; marker-end:url(#a)}
+svg .rule{stroke:var(--line); stroke-width:2}
+/* 分支標籤的白底墊片：畫在線之後（SVG 沒有 z-index，用繪製順序蓋線），
+   上面那則字用 .label（它是那條分支的名字）。→ references/diagram-craft.md §5 */
+svg .pill{fill:#fff; stroke:var(--line); stroke-width:2}
+/* ── glyph 的記號（PR 4，2026-09-06；scripts/glyphs.py）────────────────────
+   盒子裡的小圖（點陣、tile、分段條、read、探針…）用的是**記號**，不是框：
+   一顆點、一格 tile、一段 bar 是「一個東西」的圖示，不是裝東西的容器，
+   所以另開 `mk-*` 一族，⛔ 不借用 box-*／grp-*（那會讓 check_object_consistency
+   把一顆點當成一個框）。
+   顏色仍只有三種角色：分類（good／bad／null／ctl）、區別（c1~c12，實心版，
+   色值＝同號 box-cN 的描邊色 → 同名的框與記號同色）、淡（dim＝被捨棄／不算）。
+   ⛔ 沒有 mk-hl：形狀不強調（6c）。 */
+svg .mk{fill:var(--navy)}
+svg .mk-good{fill:var(--ok)}
+svg .mk-bad{fill:var(--warn)}
+svg .mk-null{fill:#fff; stroke:var(--warn); stroke-width:2; stroke-dasharray:4 3}
+svg .mk-ctl{fill:#C7CBDD}
+svg .mk-dim{fill:#D8DCEC}
+svg .mk-c1{fill:#3B5BA8}  svg .mk-c2{fill:#4B46A6}  svg .mk-c3{fill:#6E43A4}
+svg .mk-c4{fill:#4E5A70}  svg .mk-c5{fill:#2E6A96}  svg .mk-c6{fill:#6F6353}
+svg .mk-c7{fill:#1F3D6E}  svg .mk-c8{fill:#8A3F94}  svg .mk-c9{fill:#574A7A}
+svg .mk-c10{fill:#2B5566} svg .mk-c11{fill:#7A5C4B} svg .mk-c12{fill:#3F6079}
+svg .track{fill:#EDEEF3}                                   /* 座標軸／參考序列的底條 */
+svg .tick{stroke:var(--ink-2); stroke-width:2}             /* 座標軸的刻度 */
+svg .thr{stroke:var(--ink-2); stroke-width:3; stroke-dasharray:8 6; fill:none}  /* 門檻線 */
+svg .link{stroke:var(--ink-2); stroke-width:2; fill:none}  /* 無箭頭的連線（樹、配對） */
+svg .gate{fill:#FBEDEC; stroke:var(--warn); stroke-width:2; stroke-dasharray:8 5}  /* 人工確認閘 */
+svg .ck-ok{stroke:var(--ok); stroke-width:3.5; fill:none; stroke-linecap:round; stroke-linejoin:round}
+svg .ck-no{stroke:var(--warn); stroke-width:3.5; fill:none; stroke-linecap:round}
+/* ── 圖上的文字：class 說的是「這句話的用途」，不是「這句話多大」 ──────────
+   改。舊字彙是 t-sm／t-md／t-lg，編的是**大小** —— 於是寫圖的
+   agent 只被問「這句話多大」，沒有任何一個選項會讓他發現「這是旁白，不該存在」。
+   首次實跑實測：129 個 <text> 全都有 class，但 writing_rules.svg 裡有 9 句
+   是被拆短的散文（「every term it is about to use」「is looked up here, and
+   swapped」），每則都在當時的 52 字元上限之下，**全部合法通過**。
+
+   四種用途，各自的上限是從用途推出來的，不是外加的數字：
+     label  東西的名字      不限則數 ・ 不得成句
+     value  數字／結果      不限則數 ・ 不得成句
+     annot  這張圖怎麼讀    **每頁** ≤2（與 deck.json 的 sub／caption 合併計數）
+     def    名詞定義        **每頁** ≤1（同上）
+   ⛔ 淺色只給 annot 與 def —— 淺色字在結構上就最多 3 則。
+      label／value 是圖的一部分，不是註解，用正常色。
+   由 check_deck.py 機械檢查（每個 <text> 必須恰好一個用途 class）。
+
+   ── 任務 6 L0：`label` 底下的四個**角色**（修飾 class，⛔ 不是第五種用途）────
+   ⚠️ 為什麼要補：`label` 這一個用途在盒子裡其實承擔四種**不同層級**的角色，
+   而字彙裡只有 `label` 與 `label.lead` 兩級 —— 中間那幾級不存在，
+   於是 renderer 與手寫圖只好用 inline `style=` 硬補（實測 7 張圖 31 處
+   `font-size` 覆寫、25 處 `font-weight` 覆寫）。
+   ⭐ **每張圖各自發明的值不保證一樣 ＝ 粗糙與跨頁不一致的源頭。**
+   ⚠️ 而這道門是本檔自己開的：舊註解寫「不要在 SVG 裡寫**字型大小以外**的樣式」，
+   字級正好是它放行的那一項，所有層級都從那個缺口漏出去。
+
+     label.section  盒內的分段標題（`Every item carries`／`Limits`）
+     label.term     定義列左欄 —— 東西的名字
+     label.gloss    定義列右欄 —— 那個名字的一句話
+     label.num      編號欄的序號（畫在 `.pill` 上）
+
+   ⛔ **門已經關上**：`<text>` 一律不得帶 inline `font-size`／`font-weight`／
+   `letter-spacing`，由 `check_deck.py` 的 `check_inline_type()` 報 **ERROR**。
+   要新的層級就**在這裡加一個角色**，⛔ 不要在圖上寫 style。
+   ⚠️ 唯一的豁免是帶 `raw-size` 的 `<text>`（內容尺寸座標系的 read／haplotype
+   一族，見 render_figure.py 的 N89／N91 註解）—— 具名、可 grep、數量會被印出來。
+   ⚠️ `font-family` **不在**禁令裡：等寬是「這是字面／檔名」的語意記號，
+   與字級層級正交（`MONO`／`svg .item`／`svg .file-name` 都在用）。 */
+/* ⚠️ N84：選擇器**綁 class，不寫 `svg text{}`**（diagram-craft §5 的硬規則）。
+   `svg text{}` 當時剛好只選到 <text>（marker 內是 <path>）所以沒炸，但字面已違反 ——
+   一旦有人比照它寫 `svg path{}`，**全 deck 的箭頭會同時消失，而且看程式碼看不出來**。
+   ⭐ 這一串涵蓋所有會出現在 <text> 上的 class：四個用途 class 由 check_purpose()
+   保證每則字恰有一個，其餘是與它併用的結構性 class。
+   ⛔ 這條必須排在下面各條**之前** —— 特異度相同，靠順序讓個別的 fill 蓋過這裡的預設。 */
+svg .label, svg .value, svg .annot, svg .def,
+svg .t-lg, svg .t-md, svg .t-sm, svg .t-num,
+svg .grp-h, svg .file-name, svg .file-line, svg .item, svg .raw-size{
+  font-family:"Inter","Helvetica Neue",Arial,sans-serif; fill:var(--ink)}
+svg .label{font-size:22px}
+svg .label.lead{font-size:26px; font-weight:700}    /* 群組／區塊的主名 */
+/* ── label 底下的四個角色（任務 6 L0）。⛔ 值就是它們取代掉的那些 inline style，
+      這一批**只搬家、不改數字** —— 換值是 L1／L3 的事，混在一起就分不出誰造成的。
+      ⚠️ `.label.section` 的 (0,2,1) 蓋得過 `.hl` 的 (0,1,1)：`label section hl`
+      的字重仍是 700，與搬家前 inline 蓋掉 `.hl` 的結果**逐字相同**。 */
+svg .label.section{font-size:20px; font-weight:700; letter-spacing:.4px}
+svg .label.term{font-weight:600}
+svg .label.gloss{font-weight:400}
+svg .label.num{font-size:20px; font-weight:800}
+svg .value{font-size:30px; font-weight:800; fill:var(--navy)}
+svg .value.inline{font-size:22px; font-weight:700}  /* 跟在標籤後面的數值 */
+svg .value.hero{font-size:44px; font-weight:800}    /* 這一頁最重要的那個數字（glyph hero；一頁一個） */
+svg .annot{font-size:18px; fill:var(--ink-2)}
+svg .def{font-size:18px; fill:var(--ink-2); font-style:italic}
+svg .hl{fill:var(--accent); font-weight:800}        /* 強調，可疊加在任一用途上 */
+
+/* 舊字彙（大小）—— 保留只為了讓既有的圖還能渲染，⛔ 新圖不得使用。
+   check_deck.py 會對它們報 ERROR，要求改標用途。 */
+svg .t-lg{font-size:26px; font-weight:700}
+svg .t-md{font-size:22px}
+svg .t-sm{font-size:18px; fill:var(--ink-2)}
+svg .t-num{font-size:30px; font-weight:800; fill:var(--navy)}
+svg .t-hl{fill:var(--accent); font-weight:800}
+
+/* 分群清單（一次 show 出所有項目，用顏色分群、不用文字解釋欄） */
+svg .grp{fill:var(--bg-soft); stroke:var(--line); stroke-width:2}
+svg .grp-null{fill:#FBEDEC; stroke:var(--warn); stroke-width:2}      /* 預期歸零 */
+svg .grp-ctl{fill:#EDEEF3; stroke:#B8BDD0; stroke-width:2; stroke-dasharray:6 4}  /* 控制變數 */
+/* N93（批次 5g）：`tone` 的字彙只有一組（render_figure.py 的 TONE），
+   兩種形狀都要認得**全部五個**值 —— 以前 grp 只有 {hl,null,ctl}、box 只有
+   {hl,bad,good}，而排法是自動選的，於是 tone 會**靜默失效**（tone:"null"
+   在 rows 變成一般色，而「預期歸零」正是那個框存在的全部理由）。
+   ⚠️ `null` 與 `bad` 共用 warn 色是**刻意**的：兩者都是「這裡不對勁」，
+   差別在語意來源不是顏色。⛔ 不要為了區分再開第六種色（presentation_rules §5）。*/
+svg .grp-bad{fill:#FBEDEC; stroke:var(--warn); stroke-width:2}
+svg .grp-good{fill:#E9F3ED; stroke:var(--ok); stroke-width:2}
+svg .box-null{fill:#FBEDEC; stroke:var(--warn); stroke-width:2}
+svg .box-ctl{fill:#EDEEF3; stroke:#B8BDD0; stroke-width:2; stroke-dasharray:6 4}
+svg .grp-h{font-size:21px; font-weight:800; fill:var(--ink)}
+
+/* 檔案節錄：演示 agent 實際讀到什麼（內容是真的，不是描述） */
+svg .file{fill:#fff; stroke:var(--navy); stroke-width:2}
+svg .file-bar{fill:var(--navy)}
+svg .file-name{font-size:19px; fill:#fff; font-family:ui-monospace,monospace}
+svg .file-line{font-size:20px; fill:var(--ink); font-family:ui-monospace,monospace}
+svg .item{font-size:18px; fill:var(--navy-2); font-family:ui-monospace,monospace}

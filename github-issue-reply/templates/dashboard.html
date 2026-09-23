@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>github-issue-reply dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f7f8; --panel: #ffffff; --border: #ddd; --text: #222;
+    --muted: #666; --accent: #2563eb; --accent-text: #fff;
+    --danger: #b91c1c; --ok: #15803d; --awaiting-bg: #fff7ed;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", "PingFang TC", sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; }
+  h1 { font-size: 18px; margin: 0; }
+  .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  h1 code { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; }
+  details.group { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; padding: 10px 14px; }
+  details.group > summary { font-weight: 600; cursor: pointer; padding: 4px 0; }
+  .toolbar { display: flex; align-items: center; gap: 10px; margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .toolbar label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  button { cursor: pointer; border: 1px solid var(--border); background: var(--panel); border-radius: 6px; padding: 6px 12px; font-size: 13px; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .backend-select, .model-input { font-size: 12.5px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); }
+  .model-input { width: 120px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { border-top: 1px solid var(--border); padding: 8px 0; }
+  .row:first-of-type { border-top: none; }
+  .row-head { display: flex; align-items: center; gap: 8px; }
+  .row-head a { color: var(--text); text-decoration: none; font-weight: 500; }
+  .row-head a:hover { text-decoration: underline; }
+  .row-num { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .badge { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: #eee; color: var(--muted); }
+  .badge.ready { background: #dcfce7; color: var(--ok); }
+  details.content { margin: 6px 0 0 26px; }
+  details.content > summary { font-size: 12px; color: var(--muted); cursor: pointer; }
+  .content-body { margin-top: 6px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; max-width: 720px; }
+  .content-comment { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+  .content-comment-author { font-size: 11px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
+  .md-rendered { font-size: 12.5px; line-height: 1.5; word-break: break-word; }
+  .md-rendered :first-child { margin-top: 0; }
+  .md-rendered :last-child { margin-bottom: 0; }
+  .md-rendered h1, .md-rendered h2, .md-rendered h3 { font-size: 1.1em; margin: 10px 0 4px; }
+  .md-rendered p { margin: 6px 0; }
+  .md-rendered ul, .md-rendered ol { margin: 6px 0; padding-left: 22px; }
+  .md-rendered blockquote { margin: 6px 0; padding: 2px 10px; border-left: 3px solid var(--border); color: var(--muted); }
+  .md-rendered code { background: #eee; border-radius: 3px; padding: 1px 4px; font-size: 0.9em; }
+  .md-rendered pre { background: #1e1e2e; color: #eee; padding: 8px 10px; border-radius: 6px; overflow-x: auto; }
+  .md-rendered pre code { background: none; padding: 0; color: inherit; }
+  .md-rendered img { max-width: 100%; }
+  .md-rendered table { border-collapse: collapse; margin: 6px 0; }
+  .md-rendered th, .md-rendered td { border: 1px solid var(--border); padding: 4px 8px; }
+  .hint-wrap { margin: 6px 0 0 26px; max-width: 720px; }
+  .hint-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .hint-input { width: 100%; min-height: 64px; resize: vertical; font: inherit; font-size: 12.5px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); box-sizing: border-box; }
+  details.draft { margin: 8px 0 4px 26px; }
+  .questions-inline { margin-bottom: 10px; padding: 8px 10px; background: var(--awaiting-bg); border: 1px solid var(--border); border-radius: 6px; max-width: 720px; }
+  .questions-inline-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .questions-inline-label { font-size: 11px; color: var(--muted); }
+  .questions-primary { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .questions-primary input { margin: 0; }
+  .questions-input { width: 100%; min-height: 90px; resize: vertical; font: inherit; font-size: 12.5px; line-height: 1.5; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); box-sizing: border-box; }
+  .mode-bar { display: flex; gap: 6px; margin-bottom: 6px; }
+  .mode-btn { padding: 4px 10px; font-size: 12px; }
+  .mode-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  details.draft > summary { font-size: 12px; color: var(--accent); cursor: pointer; }
+  .draft-body { margin-top: 8px; }
+  .draft-actions { margin-top: 6px; display: flex; gap: 8px; align-items: center; }
+  .status { font-size: 12px; color: var(--muted); flex-basis: 100%; word-break: break-all; }
+  .status.err { color: var(--danger); }
+  .empty { color: var(--muted); font-size: 13px; padding: 6px 0; }
+</style>
+</head>
+<body>
+<div class="page-head">
+  <h1>github-issue-reply — <code id="repo-title">…</code></h1>
+  <button id="fetch-btn" title="重新從 GitHub 抓取所有 issue 並重新分類（唯讀，不會發送任何東西）">重新抓取</button>
+  <span class="status" id="fetch-status"></span>
+</div>
+<div id="app">Loading…</div>
+
+<script>
+const editors = {};      // issue number -> EasyMDE instance
+const hints = {};        // issue number -> extra instructions text, persists across re-renders
+const questionBoxes = {}; // issue number -> questions <textarea>, rebuilt each render
+const questionsPrimary = {}; // issue number -> lead with the list instead of the hint
+let DATA = null;
+
+async function api(path, body) {
+  // cache: "no-store" — otherwise the browser can serve a stale cached
+  // /api/data after a generate-draft/save, since our plain http.server
+  // responses don't send Cache-Control headers of their own.
+  const res = await fetch(path, body === undefined
+    ? { cache: "no-store" }
+    : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
+  return res.json();
+}
+
+async function loadData() {
+  DATA = await api("/api/data");
+  render();
+}
+
+function render() {
+  document.getElementById("repo-title").textContent = DATA.repo;
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+  for (const k of Object.keys(editors)) delete editors[k];
+  app.appendChild(renderGroup("awaiting_reply", "未回覆 (awaiting_reply)", DATA.states.awaiting_reply, { actionable: true, editable: true, defaultOpen: true }));
+  app.appendChild(renderGroup("replied", "已回覆 (replied)", DATA.states.replied, { actionable: true, editable: false }));
+  app.appendChild(renderGroup("closed", "已關閉 (closed)", DATA.states.closed, { actionable: false, editable: false }));
+}
+
+function renderGroup(state, label, issues, opts) {
+  const details = document.createElement("details");
+  details.className = "group";
+  details.open = !!opts.defaultOpen;
+
+  const summary = document.createElement("summary");
+  summary.textContent = `${label} — ${issues.length}`;
+  details.appendChild(summary);
+
+  if (opts.actionable) {
+    const bar = document.createElement("div");
+    bar.className = "toolbar";
+
+    const selectAll = document.createElement("label");
+    const selectAllCb = document.createElement("input");
+    selectAllCb.type = "checkbox";
+    selectAllCb.addEventListener("change", () => {
+      details.querySelectorAll(`.row-checkbox[data-state="${state}"]`)
+        .forEach(cb => { cb.checked = selectAllCb.checked; });
+    });
+    selectAll.appendChild(selectAllCb);
+    selectAll.appendChild(document.createTextNode("全選"));
+    bar.appendChild(selectAll);
+
+    if (state === "awaiting_reply") {
+      const backendSelect = document.createElement("select");
+      backendSelect.className = "backend-select";
+      for (const [value, label] of [["", "AI: 預設"], ["claude", "AI: claude"], ["codex", "AI: codex"]]) {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = label;
+        backendSelect.appendChild(opt);
+      }
+      backendSelect.title = "拆解問題／生成草稿要用哪個 AI CLI；留空用啟動 dashboard 時的預設";
+      bar.appendChild(backendSelect);
+
+      const modelInput = document.createElement("input");
+      modelInput.type = "text";
+      modelInput.className = "model-input";
+      modelInput.placeholder = "model（選填）";
+      modelInput.title = "留空用該 AI 的預設模型";
+      bar.appendChild(modelInput);
+
+      const decomposeOverwriteLabel = document.createElement("label");
+      const decomposeOverwriteCb = document.createElement("input");
+      decomposeOverwriteCb.type = "checkbox";
+      decomposeOverwriteLabel.appendChild(decomposeOverwriteCb);
+      decomposeOverwriteLabel.appendChild(document.createTextNode("覆蓋已拆解"));
+      decomposeOverwriteLabel.title = "預設只拆解還沒拆過的 issue；勾選後連拆過的也會重新拆解覆蓋";
+      bar.appendChild(decomposeOverwriteLabel);
+
+      const decomposeBtn = document.createElement("button");
+      decomposeBtn.textContent = "拆解問題";
+      decomposeBtn.title = "先把 issue 拆成一條條具體問題，生成草稿時會照這份清單逐條回答";
+      decomposeBtn.addEventListener("click", () =>
+        runAction(decomposeBtn, nums =>
+          decomposeQuestions(nums, decomposeOverwriteCb.checked, backendSelect.value, modelInput.value), state));
+      bar.appendChild(decomposeBtn);
+
+      const overwriteLabel = document.createElement("label");
+      const overwriteCb = document.createElement("input");
+      overwriteCb.type = "checkbox";
+      overwriteLabel.appendChild(overwriteCb);
+      overwriteLabel.appendChild(document.createTextNode("覆蓋已有草稿"));
+      overwriteLabel.title = "預設只生成還沒有草稿的 issue；勾選後連已有草稿的也會重新生成覆蓋";
+      bar.appendChild(overwriteLabel);
+
+      const genBtn = document.createElement("button");
+      genBtn.textContent = "生成草稿";
+      genBtn.addEventListener("click", () =>
+        runAction(genBtn, nums =>
+          generateDrafts(nums, overwriteCb.checked, backendSelect.value, modelInput.value), state));
+      bar.appendChild(genBtn);
+
+      const sendBtn = document.createElement("button");
+      sendBtn.className = "primary";
+      sendBtn.textContent = "發送回覆";
+      sendBtn.addEventListener("click", () => runAction(sendBtn, sendReplies, state));
+      bar.appendChild(sendBtn);
+
+      const markRepliedBtn = document.createElement("button");
+      markRepliedBtn.textContent = "標記為已回覆";
+      markRepliedBtn.title = "不發任何留言，只把它搬進已回覆（例如你已經在別的地方回過、或決定不回）。對方有新留言時會自動跳回未回覆";
+      markRepliedBtn.addEventListener("click", () =>
+        runAction(markRepliedBtn, nums => markState(nums, "replied"), state));
+      bar.appendChild(markRepliedBtn);
+    } else if (state === "replied") {
+      const markAwaitingBtn = document.createElement("button");
+      markAwaitingBtn.textContent = "丟回未回覆";
+      markAwaitingBtn.title = "把它搬回未回覆佇列（例如還想再補一則回覆）";
+      markAwaitingBtn.addEventListener("click", () =>
+        runAction(markAwaitingBtn, nums => markState(nums, "awaiting_reply"), state));
+      bar.appendChild(markAwaitingBtn);
+    }
+
+    // Both actionable groups can close. In awaiting_reply it means closing
+    // something you never answered, so that one asks first.
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "danger";
+    closeBtn.textContent = "Close 選中項目";
+    if (state === "awaiting_reply") {
+      closeBtn.title = "直接關閉這些還沒回覆的 issue（不會發出任何留言）";
+    }
+    closeBtn.addEventListener("click", () => {
+      if (state === "awaiting_reply") {
+        const nums = checkedNumbers(state);
+        if (nums.length && !confirm(`這 ${nums.length} 個 issue 還沒回覆，確定直接 close？\n#${nums.join(", #")}`)) return;
+      }
+      runAction(closeBtn, closeIssues, state);
+    });
+    bar.appendChild(closeBtn);
+
+    const status = document.createElement("span");
+    status.className = "status";
+    status.dataset.statusFor = state;
+    bar.appendChild(status);
+
+    details.appendChild(bar);
+  }
+
+  if (issues.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "（沒有 issue）";
+    details.appendChild(empty);
+  }
+
+  for (const issue of issues) {
+    details.appendChild(renderRow(state, issue, opts));
+  }
+
+  return details;
+}
+
+function renderRow(state, issue, opts) {
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const head = document.createElement("div");
+  head.className = "row-head";
+
+  if (opts.actionable) {
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "row-checkbox";
+    cb.dataset.state = state;
+    cb.dataset.number = issue.number;
+    head.appendChild(cb);
+  }
+
+  const num = document.createElement("span");
+  num.className = "row-num";
+  num.textContent = `#${issue.number}`;
+  head.appendChild(num);
+
+  const link = document.createElement("a");
+  link.href = issue.html_url;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.textContent = issue.title;
+  head.appendChild(link);
+
+  if (issue.manual_state) {
+    const mBadge = document.createElement("span");
+    mBadge.className = "badge";
+    mBadge.textContent = "手動標記";
+    mBadge.title = "這個分類是你手動設定的；等對方有新留言就會自動回到正常分類";
+    head.appendChild(mBadge);
+  }
+
+  if (opts.editable) {
+    const qBadge = document.createElement("span");
+    qBadge.className = "badge" + (issue.has_questions ? " ready" : "");
+    qBadge.textContent = issue.has_questions ? "questions ready" : "not decomposed";
+    head.appendChild(qBadge);
+
+    const badge = document.createElement("span");
+    badge.className = "badge" + (issue.has_draft ? " ready" : "");
+    badge.textContent = issue.has_draft ? "draft ready" : "no draft";
+    head.appendChild(badge);
+  }
+
+  row.appendChild(head);
+  row.appendChild(renderContent(issue));
+
+  if (opts.editable) {
+    row.appendChild(renderHintInput(issue));
+    row.appendChild(renderDraftEditor(state, issue));
+  }
+
+  return row;
+}
+
+function renderMarkdown(text) {
+  const html = DOMPurify.sanitize(marked.parse(text || "", { breaks: true, gfm: true }));
+  const div = document.createElement("div");
+  div.className = "md-rendered";
+  div.innerHTML = html;
+  return div;
+}
+
+function renderContent(issue) {
+  const details = document.createElement("details");
+  details.className = "content";
+
+  const summary = document.createElement("summary");
+  const commentWord = issue.comments.length ? `，${issue.comments.length} 則留言` : "";
+  summary.textContent = `顯示 issue 內容（本文${commentWord}）`;
+  details.appendChild(summary);
+
+  const body = document.createElement("div");
+  body.className = "content-body";
+  body.appendChild(renderMarkdown(issue.body || "(no body)"));
+
+  for (const c of issue.comments) {
+    const commentBlock = document.createElement("div");
+    commentBlock.className = "content-comment";
+    const author = document.createElement("div");
+    author.className = "content-comment-author";
+    author.textContent = c.login;
+    const commentText = renderMarkdown(c.body);
+    commentBlock.appendChild(author);
+    commentBlock.appendChild(commentText);
+    body.appendChild(commentBlock);
+  }
+
+  details.appendChild(body);
+  return details;
+}
+
+function renderHintInput(issue) {
+  const wrap = document.createElement("div");
+  wrap.className = "hint-wrap";
+  const label = document.createElement("div");
+  label.className = "hint-label";
+  label.textContent = "生成草稿時的額外提示（選填）";
+  wrap.appendChild(label);
+  // Plain textarea, sized like the draft box — no EasyMDE/toolbar/image
+  // upload, this is just an instruction, not a document to edit.
+  const textarea = document.createElement("textarea");
+  textarea.className = "hint-input";
+  textarea.placeholder = "例如語氣、重點方向、要不要引用某段內容…";
+  // Falls back to the last hint actually used for a draft (read back out of
+  // generate.json), so it survives a reload instead of only living in `hints`.
+  textarea.value = hints[issue.number] !== undefined ? hints[issue.number] : (issue.hint || "");
+  textarea.addEventListener("input", () => {
+    hints[issue.number] = textarea.value;
+  });
+  wrap.appendChild(textarea);
+  return wrap;
+}
+
+function renderQuestionsEditor(issue) {
+  // Editable, not just rendered: 拆解問題 output is a starting point you can
+  // fix by hand (or write from scratch without running it at all), and
+  // whatever's in this box is the list 生成草稿 will answer.
+  const wrap = document.createElement("div");
+  wrap.className = "questions-inline";
+
+  const label = document.createElement("div");
+  label.className = "questions-inline-label";
+  label.textContent = "拆解出的問題清單（可直接編輯）";
+
+  // Which side leads when both this list and a hint exist. Unchecked (default)
+  // = hint drives the reply, list is background; checked = every item here
+  // must be answered and the hint only steers how.
+  const primaryLabel = document.createElement("label");
+  primaryLabel.className = "questions-primary";
+  const primaryCb = document.createElement("input");
+  primaryCb.type = "checkbox";
+  primaryCb.checked = questionsPrimary[issue.number] !== undefined
+    ? questionsPrimary[issue.number]
+    : !!issue.questions_primary;
+  questionsPrimary[issue.number] = primaryCb.checked;
+  primaryCb.addEventListener("change", () => {
+    questionsPrimary[issue.number] = primaryCb.checked;
+  });
+  primaryLabel.appendChild(primaryCb);
+  primaryLabel.appendChild(document.createTextNode("以問題清單為主（逐條回答；不勾則以額外提示為主）"));
+  primaryLabel.title = "不勾（預設）：額外提示是回覆的主軸，這份清單只是背景，不一定每條都回。\n勾選：每一條都要回答，額外提示只用來決定怎麼回（角度、語氣、詳略）。";
+
+  const head = document.createElement("div");
+  head.className = "questions-inline-head";
+  head.appendChild(label);
+  head.appendChild(primaryLabel);
+  wrap.appendChild(head);
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "questions-input";
+  textarea.placeholder = "還沒拆解。可以按上面的「拆解問題」，或自己寫一條條問題清單。";
+  textarea.value = issue.questions || "";
+  questionBoxes[issue.number] = textarea;
+  // Save on blur so an edit isn't lost to a reload/refetch; 生成草稿 also
+  // flushes these first (see saveOpenEditors).
+  textarea.addEventListener("blur", () => saveQuestions(issue.number));
+  wrap.appendChild(textarea);
+  return wrap;
+}
+
+function renderDraftEditor(state, issue) {
+  const details = document.createElement("details");
+  details.className = "draft";
+
+  const summary = document.createElement("summary");
+  summary.textContent = "展開草稿編輯器";
+  details.appendChild(summary);
+
+  const bodyWrap = document.createElement("div");
+  bodyWrap.className = "draft-body";
+
+  bodyWrap.appendChild(renderQuestionsEditor(issue));
+
+  const modeBar = document.createElement("div");
+  modeBar.className = "mode-bar";
+  const editModeBtn = document.createElement("button");
+  editModeBtn.type = "button";
+  editModeBtn.className = "mode-btn active";
+  editModeBtn.textContent = "編輯";
+  const previewModeBtn = document.createElement("button");
+  previewModeBtn.type = "button";
+  previewModeBtn.className = "mode-btn";
+  previewModeBtn.textContent = "預覽";
+  modeBar.appendChild(editModeBtn);
+  modeBar.appendChild(previewModeBtn);
+  bodyWrap.appendChild(modeBar);
+
+  const textarea = document.createElement("textarea");
+  textarea.id = `draft-${issue.number}`;
+  textarea.value = issue.draft || "";
+  bodyWrap.appendChild(textarea);
+
+  editModeBtn.addEventListener("click", () => {
+    const ed = editors[issue.number];
+    if (ed && ed.isPreviewActive()) ed.togglePreview();
+    editModeBtn.classList.add("active");
+    previewModeBtn.classList.remove("active");
+  });
+  previewModeBtn.addEventListener("click", () => {
+    const ed = editors[issue.number];
+    if (ed && !ed.isPreviewActive()) ed.togglePreview();
+    previewModeBtn.classList.add("active");
+    editModeBtn.classList.remove("active");
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "draft-actions";
+  const saveBtn = document.createElement("button");
+  saveBtn.textContent = "儲存草稿";
+  const saveStatus = document.createElement("span");
+  saveStatus.className = "status";
+  saveBtn.addEventListener("click", async () => {
+    saveBtn.disabled = true;
+    const ed = editors[issue.number];
+    const content = ed ? ed.value() : textarea.value;
+    const res = await api("/api/save-draft", { number: issue.number, content });
+    saveStatus.textContent = res.error ? `錯誤：${res.error}` : "已儲存";
+    saveStatus.className = "status" + (res.error ? " err" : "");
+    saveBtn.disabled = false;
+  });
+  actions.appendChild(saveBtn);
+  actions.appendChild(saveStatus);
+  bodyWrap.appendChild(actions);
+
+  details.appendChild(bodyWrap);
+
+  // Instantiate the Markdown editor lazily, the first time this row is opened.
+  details.addEventListener("toggle", () => {
+    if (details.open && !editors[issue.number]) {
+      editors[issue.number] = new EasyMDE({
+        element: textarea,
+        spellChecker: false,
+        status: false,
+        uploadImage: true,
+        imageUploadFunction: (file, onSuccess, onError) => {
+          const reader = new FileReader();
+          reader.onload = async () => {
+            const dataUrl = reader.result;
+            const base64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
+            try {
+              const res = await api("/api/upload-image", {
+                number: issue.number,
+                filename: file.name,
+                data_base64: base64,
+              });
+              if (res.error) onError(res.error);
+              else onSuccess(res.url);
+            } catch (e) {
+              onError(String(e));
+            }
+          };
+          reader.onerror = () => onError("讀取圖片失敗");
+          reader.readAsDataURL(file);
+        },
+      });
+    }
+  });
+
+  return details;
+}
+
+function checkedNumbers(state) {
+  return Array.from(document.querySelectorAll(`.row-checkbox[data-state="${state}"]:checked`))
+    .map(cb => parseInt(cb.dataset.number, 10));
+}
+
+async function saveQuestions(number) {
+  const box = questionBoxes[number];
+  if (box) await api("/api/save-questions", { number, content: box.value });
+}
+
+async function saveOpenEditors(numbers) {
+  for (const n of numbers) {
+    const ed = editors[n];
+    if (ed) await api("/api/save-draft", { number: n, content: ed.value() });
+    await saveQuestions(n);
+  }
+}
+
+async function runAction(button, fn, state) {
+  const statusEl = document.querySelector(`.status[data-status-for="${state}"]`);
+  const numbers = checkedNumbers(state);
+  if (numbers.length === 0) {
+    statusEl.textContent = "沒有勾選任何 issue";
+    statusEl.className = "status err";
+    return;
+  }
+  button.disabled = true;
+  statusEl.textContent = "處理中…";
+  statusEl.className = "status";
+  try {
+    const summary = await fn(numbers);
+    statusEl.textContent = summary;
+    statusEl.className = "status";
+  } catch (e) {
+    statusEl.textContent = `錯誤：${e}`;
+    statusEl.className = "status err";
+  } finally {
+    button.disabled = false;
+    await loadData();
+  }
+}
+
+async function decomposeQuestions(numbers, overwrite, backend, model) {
+  const res = await api("/api/decompose-questions", {
+    numbers, overwrite,
+    backend: backend || undefined,
+    model: (model || "").trim() || undefined,
+  });
+  const errs = res.results.filter(r => r.error);
+  const skipped = res.results.filter(r => r.skipped);
+  const done = res.results.length - errs.length - skipped.length;
+  const parts = [`已拆解 ${done} 則（backend: ${res.backend}, model: ${res.model}）`];
+  if (skipped.length) parts.push(`略過 ${skipped.length} 個已拆解過（未勾選覆蓋）`);
+  if (errs.length) {
+    parts.push(`錯誤：${errs.map(e => `#${e.number} ${e.error}`).join("; ")}`);
+  }
+  const withFiles = res.results.filter(r => r.log_file);
+  if (withFiles.length) {
+    parts.push(
+      "紀錄檔（含當次 prompt）：" +
+      withFiles.map(r => `#${r.number} ${r.log_file}`).join("; ")
+    );
+  }
+  return parts.join("，");
+}
+
+async function generateDrafts(numbers, overwrite, backend, model) {
+  // Flush hand-edited question lists first — they feed straight into the prompt.
+  for (const n of numbers) await saveQuestions(n);
+  const relevantHints = {};
+  const relevantPrimary = {};
+  for (const n of numbers) {
+    if (hints[n] && hints[n].trim()) relevantHints[n] = hints[n];
+    if (questionsPrimary[n]) relevantPrimary[n] = true;
+  }
+  const res = await api("/api/generate-draft", {
+    numbers, hints: relevantHints, questions_primary: relevantPrimary, overwrite,
+    backend: backend || undefined,
+    model: (model || "").trim() || undefined,
+  });
+  const errs = res.results.filter(r => r.error);
+  const skipped = res.results.filter(r => r.skipped);
+  const generated = res.results.length - errs.length - skipped.length;
+  const parts = [`已生成 ${generated} 則草稿（backend: ${res.backend}, model: ${res.model}）`];
+  if (skipped.length) parts.push(`略過 ${skipped.length} 個已有草稿（未勾選覆蓋）`);
+  if (errs.length) {
+    parts.push(`錯誤：${errs.map(e => `#${e.number} ${e.error}`).join("; ")}`);
+  }
+  const withFiles = res.results.filter(r => r.log_file);
+  if (withFiles.length) {
+    parts.push(
+      "紀錄檔（含當次 prompt）：" +
+      withFiles.map(r => `#${r.number} ${r.log_file}`).join("; ")
+    );
+  }
+  return parts.join("，");
+}
+
+async function sendReplies(numbers) {
+  await saveOpenEditors(numbers);
+  const res = await api("/api/send-reply", { numbers });
+  const errs = res.results.filter(r => r.error);
+  return errs.length
+    ? `${res.results.length - errs.length}/${res.results.length} 成功，錯誤：${errs.map(e => `#${e.number} ${e.error}`).join("; ")}`
+    : `已發送 ${res.results.length} 則回覆`;
+}
+
+async function markState(numbers, state) {
+  await saveOpenEditors(numbers);  // don't lose an in-progress draft to the folder move
+  const res = await api("/api/mark-state", { numbers, state });
+  const errs = res.results.filter(r => r.error);
+  const label = state === "replied" ? "已回覆" : "未回覆";
+  return errs.length
+    ? `${res.results.length - errs.length}/${res.results.length} 成功，錯誤：${errs.map(e => `#${e.number} ${e.error}`).join("; ")}`
+    : `已把 ${res.results.length} 個 issue 標記為${label}`;
+}
+
+async function closeIssues(numbers) {
+  const res = await api("/api/close-issue", { numbers });
+  const errs = res.results.filter(r => r.error);
+  return errs.length
+    ? `${res.results.length - errs.length}/${res.results.length} 成功，錯誤：${errs.map(e => `#${e.number} ${e.error}`).join("; ")}`
+    : `已關閉 ${res.results.length} 個 issue`;
+}
+
+async function refetch() {
+  const btn = document.getElementById("fetch-btn");
+  const statusEl = document.getElementById("fetch-status");
+  btn.disabled = true;
+  statusEl.className = "status";
+  statusEl.textContent = "抓取中…（issue 多的話要一點時間）";
+  try {
+    const res = await api("/api/fetch", {});
+    if (res.error) throw new Error(res.error);
+    const c = res.counts;
+    statusEl.textContent =
+      `已更新：未回覆 ${c.awaiting_reply}、已回覆 ${c.replied}、已關閉 ${c.closed}`;
+    await loadData();
+  } catch (e) {
+    statusEl.textContent = `抓取失敗：${e.message || e}`;
+    statusEl.className = "status err";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("fetch-btn").addEventListener("click", refetch);
+
+loadData();
+</script>
+</body>
+</html>

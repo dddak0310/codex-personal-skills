@@ -1,0 +1,9 @@
+# session 目錄，一行一個（Claude Code 與 Codex 皆可）。只有 `scripts/measure_effort.py` 用得到
+# （量測實際動手時間、蒐集對話痕跡）。
+#
+# 通常不必設。預設由專案路徑推導：Claude Code 把路徑的 `/` 與 `_` 都換成 `-`，
+# 所以 `/srv/work/alice/My_Proj` → `~/.claude/projects/-srv-work-alice-My-Proj`；
+# 專案的上一層也一併算進去（在上層目錄開過的 session 也是同一段工作）。
+#
+# 只有在別的目錄底下也開過相關 session 才需要補：
+# ~/.claude/projects/-srv-work-alice-scratch

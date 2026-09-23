@@ -1,0 +1,6 @@
+# 每日日誌的事實來源 `.data/` 目錄（weekly-deck 的唯一輸入）。
+#
+# 通常不必設——預設是 `<daily-log 的 repo>/.data`，
+# 而那個 repo 由 `~/.config/daily-log/repo` 決定。
+# 只有日誌 JSON 放在別處（例如另一台機器 rsync 過來的副本）才設：
+# ~/mirror/alice-daily/.data

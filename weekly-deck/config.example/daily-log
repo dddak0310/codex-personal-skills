@@ -1,0 +1,11 @@
+# daily-log skill 的根目錄（不是日誌 repo，是那個 skill 本身）。
+#
+# 為什麼需要：weekly-deck 是 daily-log 的後處理——它讀的是 daily-log 產出的
+# `.data/*.json`。日誌 repo 在哪、專案根在哪，一律轉發給 daily-log 的
+# `scripts/paths.py` 解析，這邊不重寫一份（同一事實寫兩個地方必定分岔）。
+#
+# 兩個 skill 並存在同一個 skills 目錄時**不必設**，慣例就找得到。
+# 慣例找不到時還會依序試：$CODEX_HOME/skills/daily-log、~/.claude/skills/daily-log、
+# ~/.codex/skills/daily-log（Claude Code 與 Codex 的全域安裝落點）。
+# 只有裝在上述以外的地方才需要這一行：
+# ~/tools/daily-log

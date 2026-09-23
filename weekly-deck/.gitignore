@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+
+# 重構期間的 baseline 與比對產物（2026-09-06）
+# ⛔ 不進版控：`_refactor/baseline/reports/2026-08-31/` 是**真的那一份週報**
+#    （10 張投影片截圖 ×2 語言、2 個 pptx、含實驗室未發表內容的 deck.json）。
+#    這個 repo 是要推成實驗室公版的，README 明訂「本機的參考素材不會跟著走」。
+_refactor/

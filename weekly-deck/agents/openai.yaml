@@ -1,0 +1,8 @@
+# Codex 專用的 UI 中繼資料（Claude Code 會忽略這個檔）。
+# 規格：~/.codex/skills/.system/skill-creator/references/openai_yaml.md
+# ⚠️ 這裡只放「顯示用」的欄位。觸發與流程一律以 SKILL.md 的 frontmatter 與內文為準，
+#    同一件事不要在兩個地方各寫一份（會分岔）。
+interface:
+  display_name: "Weekly Deck"
+  short_description: "把每日工作日誌做成一週的報告投影片"
+  default_prompt: "用 $weekly-deck 把這一週的日誌做成給教授看的週報投影片。"

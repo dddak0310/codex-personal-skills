@@ -1,0 +1,4 @@
+interface:
+  display_name: "簡報建立技能"
+  short_description: "建立、編輯與匯出週報、月報及各類簡報"
+  default_prompt: "使用 $presentation-builder 將內容整理成清楚、美觀且可匯出 PPTX 的簡報。"

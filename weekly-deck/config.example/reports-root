@@ -1,0 +1,16 @@
+# 週報的輸出根目錄。每份週報是 `<這裡>/YYYY-MM-DD/`，
+# 交付物 `deck.en.html`／`deck.zh.html` 就在那一層，過程產物進 `_work/`。
+#
+# 這也是 `--since-last-deck` 去找**上一份 deck** 的地方——
+# 掃描區間的起日就是從上一份 deck.json 的 meta.range[1] + 1 天推來的。
+# ⚠️ 指錯了不會報錯，只會找不到上一份 → 區間推導靜默失效、退回手填日期。
+# 那正是不久前才剛修好的毛病，所以這一項寧可設清楚。
+#
+# 預設是 `<日誌 repo>/weekly` —— 與日誌並排：
+#   <日誌 repo>/.data/YYYY-MM-DD.json    輸入（daily-log 產）
+#   <日誌 repo>/daily/YYYY-MM-DD.html    每日日誌
+#   <日誌 repo>/weekly/YYYY-MM-DD/deck.{en,zh}.html   週報（本 skill 產）
+#
+# ⚠️ 早期版本的預設是 `<專案根>/weekly_reports`。
+#    沿用舊位置就在這裡寫出來，否則 --since-last-deck 找不到舊的 deck。
+# /path/to/project/weekly_reports
